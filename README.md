@@ -132,8 +132,6 @@ The system produces:
 ✅ **Photo management** - Automatic download and storage  
 ✅ **Multi-property tracking** - One conversation per user  
 ✅ **Error handling** - Graceful fallbacks for failed uploads  
-✅ **Bilingual ready** - Spanish with English structure  
-✅ **WhatsApp compatible** - Easy migration from Telegram  
 
 ## Limitations
 
