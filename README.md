@@ -8,7 +8,7 @@
 
 ## What It Does
 
-This conversational bot automates the process of collecting real estate property information from sellers who aren't comfortable with digital platforms. It conducts natural conversations via Telegram/WhatsApp, gathers property details including photos, normalizes messy user input, and stores structured data in a database.
+This conversational bot automates the process of collecting real estate property information from sellers who aren't comfortable with digital platforms. It conducts natural conversations via Telegram, gathers property details including photos, normalizes messy user input, and stores structured data in a database.
 
 **Key capabilities:**
 - 🤖 Natural conversation flow using OpenAI GPT-4o-mini
@@ -145,4 +145,4 @@ The system produces:
 
 > **Note:** This is an MVP focused on data collection. For production use, add duplicate detection, dashboard, and listing platform integrations.
 
-⚡️ Built in 2 hours • Part of thexperiment.dev
+⚡️ Built in ~12 hours • Part of thexperiment.dev
