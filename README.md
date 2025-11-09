@@ -2,7 +2,7 @@
 
 **Conversational AI bot for automating property information collection from non-digital sellers**
 
-**⏱️ Build time:** ~2 hours  
+**⏱️ Build time:** ~12 hours (3 iterations × 4h)  
 **🤖 Built with:** n8n, OpenAI GPT-4o-mini, Supabase, Telegram  
 **🎯 Purpose:** Streamline property listing data collection for traditional LATAM sellers using physical signs
 
