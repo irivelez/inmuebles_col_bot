@@ -53,9 +53,11 @@ Create Supabase project and run `database_schema.sql`
 
 **3. Import workflow to n8n**
 
-- Download workflow.json from this repo
-- In n8n: Workflows → Import from File
-- Select the workflow file
+- Download the file `My-workflow-2.json` from this repo
+- In n8n: Click "Workflows" → "Import from File"
+- Select the downloaded file
+
+> **⚠️ Important:** The workflow file does NOT contain your API keys or passwords. You'll need to add your own credentials in the next step.
 
 **4. Configure credentials in n8n**
 
@@ -71,6 +73,9 @@ Create Supabase project and run `database_schema.sql`
 - Credential Type: Supabase API
 - Host: Your Supabase URL
 - Service Role Secret: Your Supabase API key
+
+- > **💡 Note:** After importing, n8n will show warnings on nodes that need credentials. Click each node and select "Create New Credential" to add your keys.
+
 
 **5. Activate and test**
 
