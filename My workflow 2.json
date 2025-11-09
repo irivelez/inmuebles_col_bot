@@ -1,0 +1,875 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "28682d72-93fe-415d-9b0f-fb4e1bb1394e",
+      "name": "Telegram Trigger",
+      "webhookId": "3903c6b3-ee60-49ca-a01e-c3aa724ee51d",
+      "credentials": {
+        "telegramApi": {
+          "id": "J7l9xkH6Pz8PGpv6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "conversaciones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "=telegram_user_id",
+              "condition": "eq",
+              "keyValue": "={{$json.telegram_user_id}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "6b7efd7e-a5f8-475c-8530-7a9ce38a17cb",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "30QfUfn31yXXbPoT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0245ed64-eb4d-4418-801e-e97fe57858c8",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "a020d7bf-1555-4898-95c0-2ea6fb315bdb",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "tableId": "conversaciones",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telegram_user_id",
+              "fieldValue": "={{$node[\"Extraer Info Mensaje\"].json.telegram_user_id}}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "inicio"
+            },
+            {
+              "fieldId": "contexto",
+              "fieldValue": "={}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        96
+      ],
+      "id": "f960abe8-b113-4451-8ae3-5a954383daee",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "30QfUfn31yXXbPoT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Estructura correcta para HTTP Request\nconst respuestaOpenAI = $input.first().json.choices[0].message.content;\n\n// Obtener datos previos\nconst conversacion = $node[\"Unir Conversaciones\"].json;\nconst mensajeUsuario = $node[\"Extraer Info Mensaje\"].json.text;\n\n// Verificar si la info está completa\nconst infoCompleta = respuestaOpenAI.includes(\"INFO_COMPLETA\");\n\n// Parsear contexto si es string\nlet contextoActualizado;\nif (typeof conversacion.contexto === 'string') {\n  try {\n    contextoActualizado = JSON.parse(conversacion.contexto);\n  } catch (e) {\n    contextoActualizado = {};\n  }\n} else {\n  contextoActualizado = conversacion.contexto || {};\n}\n\n// Inicializar historial si no existe\nif (!contextoActualizado.historial) {\n  contextoActualizado.historial = [];\n}\n\n// Agregar al historial\ncontextoActualizado.historial.push({\n  role: \"user\",\n  content: mensajeUsuario\n});\n\ncontextoActualizado.historial.push({\n  role: \"assistant\",\n  content: respuestaOpenAI\n});\n\nreturn {\n  json: {\n    telegram_user_id: $node[\"Extraer Info Mensaje\"].json.telegram_user_id,\n    respuesta_usuario: respuestaOpenAI,\n    info_completa: infoCompleta,\n    contexto: JSON.stringify(contextoActualizado),\n    conversacion_id: conversacion.id,\n    estado: infoCompleta ? \"esperando_fotos\" : \"recopilando\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        -96
+      ],
+      "id": "a698d44e-37aa-4e84-b98a-682d0af96114",
+      "name": "Procesar Respuesta OpenAI"
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  json: {\n    telegram_user_id: $json.message.from.id,\n    username: $json.message.from.username,\n    message_type: $json.message.photo ? 'photo' : 'text',\n    text: $json.message.text || $json.message.caption || '',\n    photo: $json.message.photo ? $json.message.photo[$json.message.photo.length - 1].file_id : null\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "8f30626f-476a-45a6-969a-b856bcd1d6d0",
+      "name": "Extraer Info Mensaje"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        976,
+        -16
+      ],
+      "id": "833a72a1-4e06-4997-9213-ebede616313e",
+      "name": "Unir Conversaciones"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "conversaciones",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.conversacion_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.estado }}"
+            },
+            {
+              "fieldId": "contexto",
+              "fieldValue": "={{ $json.contexto }}"
+            },
+            {
+              "fieldId": "updated_at",
+              "fieldValue": "=NOW()"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3824,
+        -80
+      ],
+      "id": "1d1f7b0a-569a-4450-b155-7275b945e474",
+      "name": "Actualizar Conversación",
+      "credentials": {
+        "supabaseApi": {
+          "id": "30QfUfn31yXXbPoT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Preservar Datos\"].json.telegram_user_id }}",
+        "text": "={{ $node[\"Preservar Datos\"].json.respuesta_usuario }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4016,
+        -80
+      ],
+      "id": "39d9a3ba-14bf-431b-b310-58f2388e1631",
+      "name": "Enviar Respuesta",
+      "webhookId": "fa488da8-beb7-41f9-865c-d17b05daeb4d",
+      "credentials": {
+        "telegramApi": {
+          "id": "J7l9xkH6Pz8PGpv6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$node[\"Extraer Info Mensaje\"].json.message_type}}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ae5f02f2-96d0-4767-8abb-c371e801835f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text Message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "43d1813e-42a1-41dc-a78e-ed3fc1f52daa",
+                    "leftValue": "={{$node[\"Extraer Info Mensaje\"].json.message_type}}",
+                    "rightValue": "photo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Photo Message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1376,
+        -16
+      ],
+      "id": "9e147776-034a-4142-bd9e-fc4ce9db7cf7",
+      "name": "Tipo de Mensaje"
+    },
+    {
+      "parameters": {
+        "jsCode": "const conversacion = $input.first().json;\nconst mensajeUsuario = $node[\"Extraer Info Mensaje\"].json.text;\n\n// Parsear el contexto si es string\nlet contexto;\nif (typeof conversacion.contexto === 'string') {\n  try {\n    contexto = JSON.parse(conversacion.contexto);\n  } catch (e) {\n    contexto = {};\n  }\n} else {\n  contexto = conversacion.contexto || {};\n}\n\n// Obtener historial o inicializar vacío\nconst historial = contexto.historial || [];\n\n// Construir array de mensajes\nconst mensajes = [\n  {\n    role: \"system\",\n    content: `Eres un asistente virtual de bienes raíces en LATAM que ayuda a propietarios a registrar sus inmuebles.\n\nCAMPOS REQUERIDOS:\n- tipo_inmueble: casa, apartamento, lote, finca\n- ciudad: Ciudad completa\n- barrio: Nombre del barrio\n- precio: Precio en COP\n- area_m2: Área en metros cuadrados\n- habitaciones: Número de habitaciones\n- banos: Número de baños\n- estrato: 1-6 (Colombia)\n- caracteristicas: parqueadero, balcón, etc.\n- nombre_propietario: Nombre completo\n- telefono_propietario: Teléfono\n\nINSTRUCCIONES:\n1. Pregunta UN campo a la vez\n2. Valida que tenga sentido\n3. NO repitas preguntas ya contestadas\n4. Revisa el historial para NO repetir preguntas\n5. Cuando tengas TODOS los campos, di: \"INFO_COMPLETA\" y muestra un resumen completo en formato lista\n6. DESPUÉS del resumen, di: \"📸 Ahora envíame al menos 3 fotos de la propiedad (una por una)\"\n7. Habla en español, tono amigable\n\nIMPORTANTE: NO menciones fotos hasta tener TODA la información de texto.`    \n  }\n];\n\n// Agregar historial completo\nhistorial.forEach(msg => {\n  mensajes.push(msg);\n});\n\n// Agregar mensaje actual del usuario\nmensajes.push({\n  role: \"user\",\n  content: mensajeUsuario\n});\n\nreturn {\n  json: {\n    ...conversacion,\n    mensajes_para_openai: mensajes,\n    mensaje_actual: mensajeUsuario\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        -16
+      ],
+      "id": "20df7219-1775-448f-ac73-97c92c660ccd",
+      "name": "Preparar Mensajes OpenAI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o-mini"
+            },
+            {
+              "name": "messages",
+              "value": "={{ $json.mensajes_para_openai }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1936,
+        -96
+      ],
+      "id": "2d033cdb-bc5f-466f-9d13-c6d2af00ded2",
+      "name": "HTTP Request",
+      "credentials": {
+        "openAiApi": {
+          "id": "Hwn5cEyvFwxCnCr1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.info_completa }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "c878c13a-1a88-4b85-8a70-d101b4d498ef"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Info Completa"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "252b20b3-ebc5-4eb9-9a44-12e8b14dd3ee",
+                    "leftValue": "={{ $json.info_completa }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Incompleta"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2336,
+        -96
+      ],
+      "id": "b6e635e3-a83d-43ae-b5d4-9cf3b7fde095",
+      "name": "¿Info Completa?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const conversacion = $node[\"Procesar Respuesta OpenAI\"].json;\nconst telegram_user_id = conversacion.telegram_user_id;\nconst conversacion_id = conversacion.conversacion_id; // ESTA LÍNEA ES CRÍTICA\n\n// Parsear el contexto para extraer los datos\nlet contexto;\ntry {\n  contexto = JSON.parse(conversacion.contexto);\n} catch (e) {\n  contexto = {};\n}\n\n// Extraer campos del resumen final (último mensaje del asistente)\nconst ultimoMensaje = contexto.historial[contexto.historial.length - 1].content;\n\n// Función para extraer con regex del resumen\nfunction extractFromSummary(field) {\n  const regex = new RegExp(`- ${field}:\\\\s*(.+?)(?=\\\\n|$)`, 'i');\n  const match = ultimoMensaje.match(regex);\n  return match ? match[1].trim() : null;\n}\n\n// Función para limpiar y normalizar números\nfunction normalizeNumber(value) {\n  if (!value) return 0;\n  let cleaned = value.toString().replace(/[^\\d.,]/g, '');\n  cleaned = cleaned.replace(/,/g, '');\n  const parts = cleaned.split('.');\n  if (parts.length > 2) {\n    cleaned = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];\n  }\n  return parseFloat(cleaned) || 0;\n}\n\n// Función para limpiar precio\nfunction normalizePrice(value) {\n  if (!value) return null;\n  let cleaned = value.toString()\n    .replace(/COP|USD|cop|usd|\\$/gi, '')\n    .trim();\n  return normalizeNumber(cleaned).toString();\n}\n\n// Función para normalizar área\nfunction normalizeArea(value) {\n  if (!value) return 0;\n  let cleaned = value.toString()\n    .replace(/m²|m2|metros|cuadrados/gi, '')\n    .trim();\n  return normalizeNumber(cleaned);\n}\n\n// Función para extraer características\nfunction extractCaracteristicas(value) {\n  if (!value) return [];\n  return value.split(/,|;/).map(item => item.trim()).filter(item => item.length > 0);\n}\n\nreturn {\n  json: {\n    telegram_user_id: telegram_user_id,\n    conversacion_id: conversacion_id, // CON GUIÓN BAJO - CRÍTICO\n    tipo_inmueble: extractFromSummary('Tipo de inmueble'),\n    ciudad: extractFromSummary('Ciudad'),\n    barrio: extractFromSummary('Barrio'),\n    precio: normalizePrice(extractFromSummary('Precio')),\n    area_m2: normalizeArea(extractFromSummary('Área')),\n    habitaciones: parseInt(normalizeNumber(extractFromSummary('Habitaciones'))),\n    banos: parseInt(normalizeNumber(extractFromSummary('Baños'))),\n    estrato: parseInt(normalizeNumber(extractFromSummary('Estrato'))),\n    caracteristicas: extractCaracteristicas(extractFromSummary('Características')),\n    nombre_propietario: extractFromSummary('Nombre del propietario'),\n    telefono_propietario: extractFromSummary('Teléfono del propietario'),\n    fotos_urls: [],\n    estado: 'completo',\n    contexto: conversacion.contexto,\n    respuesta_usuario: conversacion.respuesta_usuario,\n    info_completa: true\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        -176
+      ],
+      "id": "263bd03a-ede2-4d8e-b227-083fa51da663",
+      "name": "Extraer Datos"
+    },
+    {
+      "parameters": {
+        "tableId": "propiedades",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telegram_user_id",
+              "fieldValue": "={{ $json.telegram_user_id }}"
+            },
+            {
+              "fieldId": "tipo_inmueble",
+              "fieldValue": "={{ $json.tipo_inmueble }}"
+            },
+            {
+              "fieldId": "ciudad",
+              "fieldValue": "={{ $json.ciudad }}"
+            },
+            {
+              "fieldId": "barrio",
+              "fieldValue": "={{ $json.barrio }}"
+            },
+            {
+              "fieldId": "precio",
+              "fieldValue": "={{ $json.precio }}"
+            },
+            {
+              "fieldId": "area_m2",
+              "fieldValue": "={{ $json.area_m2 }}"
+            },
+            {
+              "fieldId": "habitaciones",
+              "fieldValue": "={{ $json.habitaciones }}"
+            },
+            {
+              "fieldId": "banos",
+              "fieldValue": "={{ $json.banos }}"
+            },
+            {
+              "fieldId": "estrato",
+              "fieldValue": "={{ $json.estrato }}"
+            },
+            {
+              "fieldId": "caracteristicas",
+              "fieldValue": "={{ $json.caracteristicas }}"
+            },
+            {
+              "fieldId": "nombre_propietario",
+              "fieldValue": "={{ $json.nombre_propietario }}"
+            },
+            {
+              "fieldId": "telefono_propietario",
+              "fieldValue": "={{ $json.telefono_propietario }}"
+            },
+            {
+              "fieldId": "fotos_urls",
+              "fieldValue": "={{ $json.fotos_urls }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.estado }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2752,
+        -176
+      ],
+      "id": "71680d29-ec97-48b0-bc29-61b7a2bfb528",
+      "name": "Guardar Propiedad",
+      "credentials": {
+        "supabaseApi": {
+          "id": "30QfUfn31yXXbPoT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3440,
+        -96
+      ],
+      "id": "0fd5f894-fdd4-4f8a-86b6-a8e09b9c1608",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos de Extraer Datos (nodo anterior a Guardar Propiedad)\nconst datosExtraidos = $node[\"Extraer Datos\"].json;\n\n// Obtener resultado de Guardar Propiedad\nconst resultadoGuardado = $input.first().json;\nconst propiedadId = resultadoGuardado.id;\n\n// Parsear contexto y agregar property_id\nlet contexto;\ntry {\n  contexto = JSON.parse(datosExtraidos.contexto);\n} catch (e) {\n  contexto = {};\n}\n\n// AGREGAR property_id al contexto\ncontexto.property_id = propiedadId;\n\n// Combinar ambos: mantener los datos originales más el resultado del guardado\nreturn {\n  json: {\n    ...datosExtraidos,\n    propiedad_id: propiedadId,\n    contexto: JSON.stringify(contexto)  // contexto actualizado con property_id\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2976,
+        -176
+      ],
+      "id": "2ad752d6-d352-4794-a097-f87e517c3bab",
+      "name": "Combinar Datos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const conversacion = $node[\"Unir Conversaciones\"].json;\nconst telegramUserId = $node[\"Extraer Info Mensaje\"].json.telegram_user_id;\nconst photoFileId = $node[\"Extraer Info Mensaje\"].json.photo;\n\n// Obtener la URL de Supabase Storage si se subió\nlet photoUrl = null;\ntry {\n  const supabaseResponse = $node[\"Upload to Supabase Storage\"].json;\n  const fileKey = supabaseResponse.Key;\n  photoUrl = `https://yzlguntvlbcqhubqxsev.supabase.co/storage/v1/object/public/${fileKey}`;\n} catch (e) {\n  // Si no se pudo subir, usamos solo el file_id de Telegram\n  console.log('No se pudo obtener URL de Supabase, usando file_id');\n}\n\n// Parsear contexto\nlet contexto;\ntry {\n  contexto = JSON.parse(conversacion.contexto);\n} catch (e) {\n  contexto = {};\n}\n\n// Inicializar arrays si no existen\nif (!contexto.fotos_file_ids) {\n  contexto.fotos_file_ids = [];\n}\nif (!contexto.fotos_urls) {\n  contexto.fotos_urls = [];\n}\n\n// Agregar file_id de Telegram\ncontexto.fotos_file_ids.push(photoFileId);\n\n// Agregar URL de Supabase si existe\nif (photoUrl) {\n  contexto.fotos_urls.push(photoUrl);\n}\n\nconst totalFotos = contexto.fotos_file_ids.length;\nconst faltan = Math.max(0, 3 - totalFotos);\n\nlet mensaje;\nlet infoCompleta = false;\n\n// Check if we're in \"esperando_fotos\" state (text info already complete)\nconst esperandoFotos = conversacion.estado === \"esperando_fotos\" || conversacion.estado === \"completo\";\n\n// Track photos in context\nif (!esperandoFotos) {\n  // Aún estamos recopilando información de texto\n  mensaje = `📸 Foto ${totalFotos} recibida! Por favor, continúa respondiendo las preguntas.`;\n} else {\n  // Ya tenemos la info de texto, solo faltan fotos\n  if (totalFotos < 3) {\n    mensaje = `📸 Foto ${totalFotos} recibida! Te faltan ${faltan} foto(s) más (mínimo 3 en total).`;\n  } else if (totalFotos === 3) {\n    mensaje = `📸 ¡Perfecto! Ya tienes las 3 fotos mínimas. ¿Quieres agregar más fotos o terminamos?`;\n    infoCompleta = true;\n  } else {\n    mensaje = `📸 Foto ${totalFotos} recibida! Ya tienes más de las 3 fotos requeridas.`;\n    infoCompleta = true;\n  }\n}\n\nreturn {\n  json: {\n    telegram_user_id: telegramUserId,\n    conversacion_id: conversacion.id,\n    contexto: JSON.stringify(contexto),\n    estado: esperandoFotos ? \"esperando_fotos\" : conversacion.estado,\n    respuesta_usuario: mensaje,\n    info_completa: infoCompleta\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        80
+      ],
+      "id": "3c1bc565-cd8c-4844-809b-20921cda0321",
+      "name": "Procesar Foto"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preservar todos los datos del Merge para usarlos después\nconst data = $input.first().json;\n\n// Retornar todo lo necesario\nreturn {\n  json: {\n    ...data,  // Mantener todo lo del Merge\n    // Estos campos son críticos para los nodos siguientes\n    telegram_user_id: data.telegram_user_id,\n    conversacion_id: data.conversacion_id,\n    contexto: data.contexto,\n    estado: data.estado,\n    respuesta_usuario: data.respuesta_usuario\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3632,
+        -80
+      ],
+      "id": "c82c7c42-6294-4858-a4c6-cebbe232375a",
+      "name": "Preservar Datos"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Extraer Info Mensaje').item.json.photo }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        80
+      ],
+      "id": "3379ab34-c0e8-4751-98c8-fd28640b2766",
+      "name": "Get a file",
+      "webhookId": "5e627be7-aa49-4abd-ae8d-22a7eef69ae4",
+      "credentials": {
+        "telegramApi": {
+          "id": "J7l9xkH6Pz8PGpv6",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://yzlguntvlbcqhubqxsev.supabase.co/storage/v1/object/fotos_propiedades/{{ $('Extraer Info Mensaje').item.json.telegram_user_id }}/{{ $now.toFormat('yyyyMMdd_HHmmss') }}_{{ $runIndex }}.jpg",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $binary.mimeType }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        80
+      ],
+      "id": "a8f5e854-7498-4b27-b468-17c8e7126bc3",
+      "name": "Upload to Supabase Storage",
+      "credentials": {
+        "supabaseApi": {
+          "id": "30QfUfn31yXXbPoT",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extraer Info Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Unir Conversaciones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Unir Conversaciones",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Extraer Info Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unir Conversaciones": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensajes OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Respuesta OpenAI": {
+      "main": [
+        [
+          {
+            "node": "¿Info Completa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Conversación": {
+      "main": [
+        [
+          {
+            "node": "Enviar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Mensaje": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensajes OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Tipo de Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Procesar Respuesta OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Info Completa?": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Extraer Datos": {
+      "main": [
+        [
+          {
+            "node": "Guardar Propiedad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Propiedad": {
+      "main": [
+        [
+          {
+            "node": "Combinar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Preservar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar Datos": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Foto": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Preservar Datos": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Upload to Supabase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Supabase Storage": {
+      "main": [
+        [
+          {
+            "node": "Procesar Foto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8b92ab4b-52b7-458a-86db-5f0da9c06fc4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dfd20e8d53ec169d19ca349000af06b6b6428a87eed315da21d20e3dfb9676e8"
+  },
+  "id": "fuIvyAGyxeOGAUU3",
+  "tags": []
+}
